@@ -6,6 +6,8 @@ class VoiceResponse {
   final String userAudioUrl;
   final String botAudioUrl;
   final String emotion;
+  final String? detectedLanguage;
+  final String? responseLanguage;
 
   VoiceResponse({
     required this.userText,
@@ -13,6 +15,8 @@ class VoiceResponse {
     required this.userAudioUrl,
     required this.botAudioUrl,
     required this.emotion,
+    this.detectedLanguage,
+    this.responseLanguage,
   });
 
   factory VoiceResponse.fromJson(Map<String, dynamic> json) {
@@ -21,7 +25,9 @@ class VoiceResponse {
       botText: json['bot_text'] ?? '',
       userAudioUrl: json['user_audio_url'] ?? '',
       botAudioUrl: json['bot_audio_url'] ?? '',
-      emotion: json['user_emotion'] ?? '',
+      emotion: json['user_emotion'] ?? json['emotion'] ?? '',
+      detectedLanguage: json['detected_language'],
+      responseLanguage: json['response_language'],
     );
   }
 

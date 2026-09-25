@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fyp_flutter/views/components/constants.dart';
 import 'package:get/get.dart';
 import '../../controllers/side_menu_controller.dart';
-import '../../models/chat_session.dart';
 
 class SideMenu extends StatelessWidget {
   final Function(int?) onSessionSelected;

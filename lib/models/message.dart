@@ -41,6 +41,7 @@ class APIChatMessage {
   final String? messageText;
   final String? timestamp;
   final String emotion;
+  final String? voiceFile;
 
   APIChatMessage({
     required this.messageId,
@@ -48,6 +49,7 @@ class APIChatMessage {
     this.messageText,
     this.timestamp,
     required this.emotion,
+    this.voiceFile,
   });
 
   factory APIChatMessage.fromJson(Map<String, dynamic> json) {
@@ -57,8 +59,8 @@ class APIChatMessage {
       messageText: json['message_text'],
       timestamp: json['timestamp'],
       emotion: json['emotion'] ?? '',
+      voiceFile: json['voice_file'],
     );
   }
-
-  String? get voiceFile => null;
 }
+

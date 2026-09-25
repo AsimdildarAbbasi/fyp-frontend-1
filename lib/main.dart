@@ -7,11 +7,10 @@ import 'views/home/chat_sessions_screen.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Check if student is already logged in
-  //final prefs = await SharedPreferences.getInstance();
- // final studentId = prefs.getString('student_id');
+  final prefs = await SharedPreferences.getInstance();
+  final studentId = prefs.getString('student_id');
   
-  runApp(FYPApp(isLoggedIn: false));
+  runApp(FYPApp(isLoggedIn: studentId != null && studentId.isNotEmpty));
 }
 
 class FYPApp extends StatelessWidget {

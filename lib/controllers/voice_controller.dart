@@ -1,5 +1,7 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' as io;
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:fyp_flutter/controllers/side_menu_controller.dart';
 import 'package:get/get.dart';
@@ -13,6 +15,16 @@ import '../services/chat_service.dart';
 import '../services/voice_service.dart';
 import '../network/network_manager.dart';
 
+enum VoiceChatState {
+  idle,
+  recording,
+  uploading,
+  processingStt,
+  generatingText,
+  preparingTts,
+  completed,
+}
+
 class VoiceController extends GetxController {
   final ChatService _chatService = ChatService();
   final VoiceService _voiceService = VoiceService();
@@ -20,15 +32,38 @@ class VoiceController extends GetxController {
   final AudioRecorder _audioRecorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  var isRecording = false.obs;
-  var secondsElapsed = 0.obs;
-  var isUploading = false.obs;
+  // State Management
+  final Rx<VoiceChatState> voiceState = VoiceChatState.idle.obs;
+  final RxBool isRecording = false.obs;
+  final RxBool isUploading = false.obs;
+  final RxInt secondsElapsed = 0.obs;
 
-  var sessionId = RxnInt();
-  var newVoiceResponse = Rxn<VoiceResponse>();
+  // Real-time dynamic messages
+  final RxString statusMessage = ''.obs;
+  final RxString userTranscript = ''.obs;
+  final RxString streamingReplyText = ''.obs;
+
+  // Active chat session & completed voice responses
+  final RxnInt sessionId = RxnInt();
+  final Rxn<VoiceResponse> newVoiceResponse = Rxn<VoiceResponse>();
+
+  // Audio Playback states
+  final RxBool isPlayingAudio = false.obs;
+  final RxString currentlyPlayingUrl = ''.obs;
 
   Timer? _timer;
   String? _audioFilePath;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _audioPlayer.onPlayerStateChanged.listen((state) {
+      isPlayingAudio.value = (state == PlayerState.playing);
+      if (state == PlayerState.completed || state == PlayerState.stopped) {
+        currentlyPlayingUrl.value = '';
+      }
+    });
+  }
 
   @override
   void onClose() {
@@ -39,22 +74,26 @@ class VoiceController extends GetxController {
   }
 
   Future<void> toggleRecording() async {
-    if (isRecording.value) {
+    if (voiceState.value == VoiceChatState.recording) {
       await stopRecording();
-    } else {
+    } else if (voiceState.value == VoiceChatState.idle) {
       await startRecording();
     }
   }
 
   Future<bool> _checkAndRequestPermissions() async {
-    // Check if the record package already has permission
+    // Web handles permissions directly via browser getUserMedia in the recorder
     if (await _audioRecorder.hasPermission()) {
       return true;
     }
 
-    // Fallback to permission_handler to request or open settings
-    var status = await Permission.microphone.request();
+    if (kIsWeb) {
+      Get.snackbar('Permission Denied', 'Microphone permission is required.');
+      return false;
+    }
 
+    // Native platform permission check
+    var status = await Permission.microphone.request();
     if (status.isGranted) {
       return true;
     } else if (status.isPermanentlyDenied) {
@@ -75,72 +114,122 @@ class VoiceController extends GetxController {
       final hasPermission = await _checkAndRequestPermissions();
       if (!hasPermission) return;
 
-      final dir = await getApplicationDocumentsDirectory();
-      // Use a timestamp to prevent file lock/overwrite issues
-      _audioFilePath = '${dir.path}/input_${DateTime.now().millisecondsSinceEpoch}.m4a';
+      // Reset dynamic states
+      userTranscript.value = '';
+      streamingReplyText.value = '';
+      statusMessage.value = '';
+      secondsElapsed.value = 0;
 
-      // Explicitly set the config to ensure cross-platform compatibility
-      const config = RecordConfig(
-        encoder: AudioEncoder.aacLc, // Standard for .m4a
-        bitRate: 128000,
-        sampleRate: 44100,
-      );
+      RecordConfig config;
 
-      await _audioRecorder.start(config, path: _audioFilePath!);
+      if (kIsWeb) {
+        // Safe cross-browser web recording config
+        if (await _audioRecorder.isEncoderSupported(AudioEncoder.aacLc)) {
+          config = const RecordConfig(encoder: AudioEncoder.aacLc);
+        } else if (await _audioRecorder.isEncoderSupported(AudioEncoder.opus)) {
+          config = const RecordConfig(encoder: AudioEncoder.opus);
+        } else {
+          config = const RecordConfig(encoder: AudioEncoder.wav);
+        }
+        await _audioRecorder.start(config, path: '');
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        _audioFilePath = '${dir.path}/input_${DateTime.now().millisecondsSinceEpoch}.m4a';
+        config = const RecordConfig(
+          encoder: AudioEncoder.aacLc,
+          bitRate: 128000,
+          sampleRate: 44100,
+        );
+        await _audioRecorder.start(config, path: _audioFilePath!);
+      }
 
+      voiceState.value = VoiceChatState.recording;
       isRecording.value = true;
       _startTimer();
     } catch (e) {
+      voiceState.value = VoiceChatState.idle;
       isRecording.value = false;
-      Get.snackbar('Recording Error', 'Failed to start recording.');
-      print("Start recording error: $e");
+      Get.snackbar('Recording Error', 'Failed to start recording: $e');
+      debugPrint("Start recording error: $e");
     }
   }
 
   Future<void> stopRecording() async {
     try {
-      // ALWAYS use the path returned by stop()
       final path = await _audioRecorder.stop();
-      isRecording.value = false;
       _stopTimer();
+      isRecording.value = false;
+
+      // Stage: UPLOADING
+      voiceState.value = VoiceChatState.uploading;
+      isUploading.value = true;
+      statusMessage.value = "Uploading voice...";
 
       if (path != null) {
         _audioFilePath = path;
-        String capturedEmotion = "Neutral"; // Skipping MuseManager logic
-        await uploadVoice(capturedEmotion);
+        Uint8List audioBytes;
+        String fileName = "user_voice.m4a";
+        String mimeType = "audio/m4a";
+
+        if (kIsWeb) {
+          // On Web, path is a blob URL
+          final blobUri = Uri.parse(path);
+          final blobResponse = await http.get(blobUri);
+          audioBytes = blobResponse.bodyBytes;
+
+          if (path.contains("wav")) {
+            fileName = "user_voice.wav";
+            mimeType = "audio/wav";
+          } else if (path.contains("ogg")) {
+            fileName = "user_voice.ogg";
+            mimeType = "audio/ogg";
+          } else {
+            fileName = "user_voice.webm";
+            mimeType = "audio/webm";
+          }
+        } else {
+          final file = io.File(path);
+          if (!await file.exists()) {
+            throw Exception("Recorded file not found at $path");
+          }
+          audioBytes = await file.readAsBytes();
+        }
+
+        const capturedEmotion = "Neutral";
+        await _streamVoiceMessage(
+          audioBytes: audioBytes,
+          fileName: fileName,
+          mimeType: mimeType,
+          emotion: capturedEmotion,
+        );
       } else {
+        voiceState.value = VoiceChatState.idle;
+        isUploading.value = false;
+        statusMessage.value = '';
         Get.snackbar('Error', 'Failed to save recording.');
       }
     } catch (e) {
+      voiceState.value = VoiceChatState.idle;
       isRecording.value = false;
-      Get.snackbar('Recording Error', 'Failed to stop recording.');
-      print("Stop recording error: $e");
+      isUploading.value = false;
+      statusMessage.value = '';
+      Get.snackbar('Recording Error', 'Failed to stop recording: $e');
+      debugPrint("Stop recording error: $e");
     }
   }
 
-  Future<void> uploadVoice(String emotion) async {
-    if (_audioFilePath == null) return;
-
-    final file = File(_audioFilePath!);
-    if (!await file.exists()) {
-      Get.snackbar('Error', 'Audio file could not be found.');
-      return;
-    }
-
-    isUploading.value = true;
-
+  Future<void> _streamVoiceMessage({
+    required Uint8List audioBytes,
+    required String fileName,
+    required String mimeType,
+    required String emotion,
+  }) async {
     try {
-      final data = await file.readAsBytes();
       int? activeId = sessionId.value;
 
       if (activeId == null) {
         final prefs = await SharedPreferences.getInstance();
-        final studentId = prefs.getString('student_id');
-
-        if (studentId == null) {
-          Get.snackbar('Session Error', 'No student ID found. Please log in again.');
-          return;
-        }
+        String studentId = prefs.getString('student_id') ?? "2023-ARID-0274";
 
         activeId = await _chatService.createNewSession(studentId);
         sessionId.value = activeId;
@@ -150,38 +239,166 @@ class VoiceController extends GetxController {
         }
       }
 
-      final response = await _voiceService.uploadVoice(
-        activeId!,
-        data,
-        "user_voice.m4a",
-        emotion,
+      final stream = _voiceService.uploadVoiceStream(
+        sessionId: activeId,
+        fileData: audioBytes,
+        fileName: fileName,
+        mimeType: mimeType,
+        emotion: emotion,
       );
 
-      newVoiceResponse.value = response;
-      playBotAudio(response.botAudioUrl);
+      await for (final event in stream) {
+        final type = event['type'] as String?;
 
+        switch (type) {
+          case 'status':
+            final msg = (event['message'] ?? '').toString();
+            statusMessage.value = msg;
+            if (msg.contains('Preparing your voice') ||
+                msg.contains('Understanding your voice')) {
+              // Stage: PROCESSING_STT
+              voiceState.value = VoiceChatState.processingStt;
+            } else if (msg.contains('Preparing the audio reply')) {
+              // Stage: PREPARING_TTS
+              voiceState.value = VoiceChatState.preparingTts;
+            }
+            break;
+
+          case 'transcript':
+            // Render transcribed text above floating box
+            userTranscript.value = (event['text'] ?? '').toString();
+            voiceState.value = VoiceChatState.generatingText;
+            statusMessage.value = "Advisor is replying...";
+            break;
+
+          case 'reply_start':
+            // Stage: GENERATING_TEXT
+            voiceState.value = VoiceChatState.generatingText;
+            statusMessage.value = "Advisor is replying...";
+            streamingReplyText.value = '';
+            break;
+
+          case 'token':
+            // Stream token by token
+            voiceState.value = VoiceChatState.generatingText;
+            statusMessage.value = "Advisor is replying...";
+            final token = (event['text'] ?? '').toString();
+            streamingReplyText.value += token;
+            break;
+
+          case 'reply_complete':
+            final completeText = (event['text'] ?? '').toString();
+            if (completeText.isNotEmpty) {
+              streamingReplyText.value = completeText;
+            }
+            // Stage: PREPARING_TTS
+            voiceState.value = VoiceChatState.preparingTts;
+            statusMessage.value = "Preparing the audio reply...";
+            break;
+
+          case 'complete':
+            final data = event['data'] as Map<String, dynamic>? ?? {};
+            final finalUserText =
+                (data['user_text'] ?? userTranscript.value).toString();
+            final finalBotText =
+                (data['bot_text'] ?? streamingReplyText.value).toString();
+            final userAudioUrl = (data['user_audio_url'] ?? '').toString();
+            final botAudioUrl = (data['bot_audio_url'] ?? '').toString();
+            final userEmotion = (data['user_emotion'] ?? emotion).toString();
+
+            // Stage: COMPLETED
+            voiceState.value = VoiceChatState.completed;
+
+            final response = VoiceResponse(
+              userText: finalUserText,
+              botText: finalBotText,
+              userAudioUrl: userAudioUrl,
+              botAudioUrl: botAudioUrl,
+              emotion: userEmotion,
+              detectedLanguage: data['detected_language']?.toString(),
+              responseLanguage: data['response_language']?.toString(),
+            );
+
+            // Notify ChatScreen to append message pair to main chat list
+            newVoiceResponse.value = response;
+
+            // Automatically play bot audio reply
+            if (botAudioUrl.isNotEmpty) {
+              playBotAudio(botAudioUrl);
+            }
+
+            // Brief transition delay before clearing bottom floating card
+            await Future.delayed(const Duration(milliseconds: 350));
+            userTranscript.value = '';
+            streamingReplyText.value = '';
+            statusMessage.value = '';
+            isUploading.value = false;
+            voiceState.value = VoiceChatState.idle;
+            break;
+
+          case 'error':
+            final errorMsg =
+                (event['message'] ?? 'Voice processing failed.').toString();
+            Get.snackbar('Voice Error', errorMsg);
+            voiceState.value = VoiceChatState.idle;
+            isUploading.value = false;
+            statusMessage.value = '';
+            userTranscript.value = '';
+            streamingReplyText.value = '';
+            break;
+        }
+      }
     } catch (e) {
-      Get.snackbar('Upload Failed', 'Could not send the voice message.');
-      print("Failed to upload voice: $e");
-    } finally {
-      // Ensure uploading state is reset even if an error occurs
+      Get.snackbar('Stream Error', 'Could not process voice: $e');
+      debugPrint("Voice stream processing error: $e");
+      voiceState.value = VoiceChatState.idle;
       isUploading.value = false;
+      statusMessage.value = '';
+      userTranscript.value = '';
+      streamingReplyText.value = '';
     }
   }
 
   void playBotAudio(String path) async {
     try {
-      final fullURLString = NetworkManager.baseURL + path;
+      if (path.isEmpty) return;
+      final fullURLString = resolveAudioUrl(path);
+
+      if (isPlayingAudio.value && currentlyPlayingUrl.value == fullURLString) {
+        await _audioPlayer.stop();
+        isPlayingAudio.value = false;
+        currentlyPlayingUrl.value = '';
+        return;
+      }
+
+      await _audioPlayer.stop();
+      currentlyPlayingUrl.value = fullURLString;
       await _audioPlayer.play(UrlSource(fullURLString));
     } catch (e) {
-      Get.snackbar('Playback Error', 'Failed to play the response.');
-      print("Audio playback error: $e");
+      Get.snackbar('Playback Error', 'Failed to play audio.');
+      debugPrint("Audio playback error: $e");
     }
+  }
+
+  String resolveAudioUrl(String path) {
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    final base = NetworkManager.baseURL;
+    if (path.startsWith('/api/')) {
+      final domain =
+          base.endsWith('/api') ? base.substring(0, base.length - 4) : base;
+      return '$domain$path';
+    }
+    if (!path.startsWith('/')) {
+      path = '/$path';
+    }
+    return '$base$path';
   }
 
   void _startTimer() {
     secondsElapsed.value = 0;
-    _timer?.cancel(); // Cancel any existing timer to prevent overlapping
+    _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       secondsElapsed.value++;
     });

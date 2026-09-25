@@ -20,4 +20,24 @@ class VoiceService {
 
     return VoiceResponse.fromJson(responseData);
   }
+
+  Stream<Map<String, dynamic>> uploadVoiceStream({
+    required int sessionId,
+    required Uint8List fileData,
+    required String fileName,
+    required String mimeType,
+    required String emotion,
+  }) async* {
+    yield* _network.uploadFileStream(
+      "/$sessionId/voice",
+      fileData,
+      fileName,
+      mimeType: mimeType,
+      parameters: {
+        "emotion": emotion,
+        "stream": "true",
+      },
+    );
+  }
 }
+
