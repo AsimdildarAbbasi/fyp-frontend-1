@@ -229,7 +229,15 @@ class VoiceController extends GetxController {
 
       if (activeId == null) {
         final prefs = await SharedPreferences.getInstance();
-        String studentId = prefs.getString('student_id') ?? "2023-ARID-0274";
+        final studentId = prefs.getString('student_id');
+
+        if (studentId == null || studentId.isEmpty) {
+          Get.snackbar('Session Required', 'Please log in to start voice chat.');
+          voiceState.value = VoiceChatState.idle;
+          isUploading.value = false;
+          statusMessage.value = '';
+          return;
+        }
 
         activeId = await _chatService.createNewSession(studentId);
         sessionId.value = activeId;
@@ -246,6 +254,8 @@ class VoiceController extends GetxController {
         mimeType: mimeType,
         emotion: emotion,
       );
+
+      bool completed = false;
 
       await for (final event in stream) {
         final type = event['type'] as String?;
@@ -297,6 +307,7 @@ class VoiceController extends GetxController {
             break;
 
           case 'complete':
+            completed = true;
             final data = event['data'] as Map<String, dynamic>? ?? {};
             final finalUserText =
                 (data['user_text'] ?? userTranscript.value).toString();
@@ -337,6 +348,7 @@ class VoiceController extends GetxController {
             break;
 
           case 'error':
+            completed = true;
             final errorMsg =
                 (event['message'] ?? 'Voice processing failed.').toString();
             Get.snackbar('Voice Error', errorMsg);
@@ -348,11 +360,75 @@ class VoiceController extends GetxController {
             break;
         }
       }
+
+      if (!completed && voiceState.value != VoiceChatState.idle) {
+        voiceState.value = VoiceChatState.idle;
+        isUploading.value = false;
+        statusMessage.value = '';
+      }
     } catch (e) {
       Get.snackbar('Stream Error', 'Could not process voice: $e');
       debugPrint("Voice stream processing error: $e");
       voiceState.value = VoiceChatState.idle;
       isUploading.value = false;
+      statusMessage.value = '';
+      userTranscript.value = '';
+      streamingReplyText.value = '';
+    }
+  }
+
+  Future<void> sendTextMessage(String text) async {
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return;
+    if (voiceState.value != VoiceChatState.idle) return;
+
+    try {
+      int? activeId = sessionId.value;
+
+      if (activeId == null) {
+        final prefs = await SharedPreferences.getInstance();
+        final studentId = prefs.getString('student_id');
+
+        if (studentId == null || studentId.isEmpty) {
+          Get.snackbar('Session Required', 'Please log in to send a message.');
+          return;
+        }
+
+        activeId = await _chatService.createNewSession(studentId);
+        sessionId.value = activeId;
+
+        if (Get.isRegistered<SideMenuController>()) {
+          Get.find<SideMenuController>().loadHistory();
+        }
+      }
+
+      userTranscript.value = trimmed;
+      streamingReplyText.value = '';
+      voiceState.value = VoiceChatState.generatingText;
+      statusMessage.value = "Advisor is replying...";
+
+      final response = await _chatService.sendTextMessage(
+        activeId,
+        trimmed,
+        emotion: "Neutral",
+      );
+
+      voiceState.value = VoiceChatState.completed;
+      newVoiceResponse.value = response;
+
+      if (response.botAudioUrl.isNotEmpty) {
+        playBotAudio(response.botAudioUrl);
+      }
+
+      await Future.delayed(const Duration(milliseconds: 350));
+      userTranscript.value = '';
+      streamingReplyText.value = '';
+      statusMessage.value = '';
+      voiceState.value = VoiceChatState.idle;
+    } catch (e) {
+      Get.snackbar('Chat Error', 'Could not send message: $e');
+      debugPrint("Send text message error: $e");
+      voiceState.value = VoiceChatState.idle;
       statusMessage.value = '';
       userTranscript.value = '';
       streamingReplyText.value = '';
@@ -381,19 +457,19 @@ class VoiceController extends GetxController {
   }
 
   String resolveAudioUrl(String path) {
+    if (path.isEmpty) return '';
     if (path.startsWith('http://') || path.startsWith('https://')) {
       return path;
     }
+    final cleanPath = path.startsWith('/') ? path : '/$path';
     final base = NetworkManager.baseURL;
-    if (path.startsWith('/api/')) {
-      final domain =
-          base.endsWith('/api') ? base.substring(0, base.length - 4) : base;
-      return '$domain$path';
+    final domain =
+        base.endsWith('/api') ? base.substring(0, base.length - 4) : base;
+
+    if (cleanPath.startsWith('/api/')) {
+      return '$domain$cleanPath';
     }
-    if (!path.startsWith('/')) {
-      path = '/$path';
-    }
-    return '$base$path';
+    return '$domain/api$cleanPath';
   }
 
   void _startTimer() {

@@ -13,6 +13,7 @@ import '../components/message_bubble.dart';
 import '../components/side_menu.dart';
 import '../components/voice_input_bar.dart';
 import '../profile_view.dart';
+import '../auth/login_view.dart';
 
 class ChatSessionsScreen extends StatefulWidget {
   const ChatSessionsScreen({super.key});
@@ -126,7 +127,13 @@ class _ChatSessionsScreenState extends State<ChatSessionsScreen> {
 
   Future<void> _startNewChat() async {
     final prefs = await SharedPreferences.getInstance();
-    String studentId = prefs.getString('student_id') ?? "2023-ARID-0274";
+    final studentId = prefs.getString('student_id');
+
+    if (studentId == null || studentId.isEmpty) {
+      Get.snackbar('Session Required', 'Please log in to start a new chat.');
+      Get.offAll(() => LoginView());
+      return;
+    }
 
     try {
       final newId = await ChatService().createNewSession(studentId);

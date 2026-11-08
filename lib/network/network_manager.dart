@@ -1,10 +1,135 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NetworkManager {
-  //static const String baseURL = "http://10.156.120.215:8000/api";
-  // static const String baseURL = "http:// 192.168.100.6/8000/api";
-  static const String baseURL = "http://127.0.0.1:8000/api";
+  //static const String baseURL = "http://10.166.36.83:8000/api";
+  //static const String baseURL = "http://192.168.1.27:8000/api";//home
+  static const String defaultBaseURL = "http://192.168.24.207:8000/api";//hotspot
+  static String _currentBaseURL = defaultBaseURL;
+
+  static final ValueNotifier<String> baseURLNotifier = ValueNotifier<String>(_currentBaseURL);
+
+  static String get baseURL => _currentBaseURL;
+
+  static const String _prefKey = 'custom_base_url';
+
+  static Future<void> init() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final saved = prefs.getString(_prefKey);
+      if (saved != null && saved.trim().isNotEmpty) {
+        _currentBaseURL = formatBaseUrl(saved);
+        baseURLNotifier.value = _currentBaseURL;
+      }
+    } catch (_) {}
+  }
+
+  static Future<void> setBaseURL(String newUrl) async {
+    final formatted = formatBaseUrl(newUrl);
+    _currentBaseURL = formatted;
+    baseURLNotifier.value = formatted;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_prefKey, formatted);
+    } catch (_) {}
+  }
+
+  static Future<void> resetToDefault() async {
+    _currentBaseURL = defaultBaseURL;
+    baseURLNotifier.value = defaultBaseURL;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove(_prefKey);
+    } catch (_) {}
+  }
+
+  static String get displayHost {
+    try {
+      final uri = Uri.parse(_currentBaseURL);
+      if (uri.hasPort) {
+        return '${uri.host}:${uri.port}';
+      }
+      return uri.host.isNotEmpty ? uri.host : _currentBaseURL;
+    } catch (_) {
+      return _currentBaseURL;
+    }
+  }
+
+  static String formatBaseUrl(String input) {
+    var text = input.trim().replaceAll(' ', '');
+    if (text.isEmpty) {
+      return defaultBaseURL;
+    }
+
+    if (!text.startsWith('http://') && !text.startsWith('https://')) {
+      text = 'http://$text';
+    }
+
+    try {
+      final uri = Uri.parse(text);
+      final scheme = uri.scheme.isNotEmpty ? uri.scheme : 'http';
+      final host = uri.host.isNotEmpty
+          ? uri.host
+          : text.replaceFirst(RegExp(r'https?://'), '').split(':').first.split('/').first;
+      final port = uri.hasPort ? uri.port : 8000;
+
+      var path = uri.path.trim();
+      while (path.endsWith('/')) {
+        path = path.substring(0, path.length - 1);
+      }
+      if (path.isEmpty) {
+        path = '/api';
+      } else if (!path.endsWith('/api')) {
+        path = '$path/api';
+      }
+
+      return '$scheme://$host:$port$path';
+    } catch (_) {
+      while (text.endsWith('/')) {
+        text = text.substring(0, text.length - 1);
+      }
+      if (!text.endsWith('/api')) {
+        text = '$text/api';
+      }
+      return text;
+    }
+  }
+
+  static Future<Map<String, dynamic>> testConnection([String? testUrl]) async {
+    final target = formatBaseUrl(testUrl ?? baseURL);
+    try {
+      final uri = Uri.parse(target);
+      final testUrls = [
+        Uri.parse('${uri.scheme}://${uri.host}:${uri.port}/'),
+        Uri.parse('${uri.scheme}://${uri.host}:${uri.port}/docs'),
+        Uri.parse(target),
+      ];
+
+      for (final u in testUrls) {
+        try {
+          final response = await http.get(u).timeout(const Duration(seconds: 3));
+          if (response.statusCode >= 200 && response.statusCode < 500) {
+            return {
+              'success': true,
+              'message': 'Connected successfully! (HTTP ${response.statusCode})',
+            };
+          }
+        } catch (_) {}
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'message': 'Connection error: $e',
+      };
+    }
+    return {
+      'success': false,
+      'message': 'Cannot reach server at $target. Make sure backend is running and phone is on same Wi-Fi.',
+    };
+  }
+
 
   Future<dynamic> request(String url, String method, {Map<String, dynamic>? body}) async {
     final fullUrl = Uri.parse(baseURL + url);

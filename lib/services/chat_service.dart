@@ -1,6 +1,7 @@
 import 'package:intl/intl.dart';
 import '../models/chat_session.dart';
 import '../models/message.dart';
+import '../models/voice_response.dart';
 import '../network/network_manager.dart';
 
 class ChatService {
@@ -71,5 +72,23 @@ class ChatService {
 
     final data = await _network.request('/chat-sessions', 'POST', body: requestBody);
     return data['session_id'] as int;
+  }
+
+  Future<VoiceResponse> sendTextMessage(
+    int sessionId,
+    String message, {
+    String emotion = "Neutral",
+  }) async {
+    final requestBody = {
+      "message": message,
+      "emotion": emotion,
+    };
+
+    final data = await _network.request(
+      '/$sessionId/text',
+      'POST',
+      body: requestBody,
+    );
+    return VoiceResponse.fromJson(data as Map<String, dynamic>);
   }
 }
