@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fyp_flutter/views/components/constants.dart';
+import 'package:fyp_flutter/views/components/advisor_voice_settings_sheet.dart';
 import 'package:get/get.dart';
 import '../../controllers/side_menu_controller.dart';
 
@@ -99,6 +100,26 @@ class SideMenu extends StatelessWidget {
                   },
                 );
               }),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.graphic_eq_rounded, color: Colors.blue, size: 20),
+              ),
+              title: const Text(
+                "Advisor Voice Settings",
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+              ),
+              trailing: const Icon(Icons.chevron_right, size: 20, color: Colors.grey),
+              onTap: () {
+                Navigator.of(context).pop();
+                showAdvisorVoiceSettings(context);
+              },
             ),
           ],
         ),

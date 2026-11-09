@@ -12,6 +12,7 @@ import '../../services/chat_service.dart';
 import '../components/message_bubble.dart';
 import '../components/side_menu.dart';
 import '../components/voice_input_bar.dart';
+import '../components/advisor_voice_settings_sheet.dart';
 import '../profile_view.dart';
 import '../auth/login_view.dart';
 
@@ -197,6 +198,40 @@ class _ChatSessionsScreenState extends State<ChatSessionsScreen> {
                               fontSize: 12,
                             ),
                             textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 18),
+                          GestureDetector(
+                            onTap: () => showAdvisorVoiceSettings(context),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: const Color(0xFFBFDBFE)),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.04),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.auto_awesome, size: 14, color: Color(0xFF0284C7)),
+                                  SizedBox(width: 6),
+                                  Text(
+                                    "Advisor Voice Settings",
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF0284C7),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -515,17 +550,46 @@ class _ChatSessionsScreenState extends State<ChatSessionsScreen> {
               color: Colors.black87,
             ),
           ),
-          GestureDetector(
-            onTap: () => Get.to(() => ProfileView()),
-            child: const CircleAvatar(
-              radius: 18,
-              backgroundColor: Color(0xFF0B1C2D),
-              child: Icon(
-                Icons.person_outlined,
-                color: Colors.white,
-                size: 20,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                tooltip: "Advisor Voice Settings",
+                icon: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.06),
+                        blurRadius: 4,
+                        offset: const Offset(0, 1),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.graphic_eq_rounded,
+                    color: Color(0xFF245C94),
+                    size: 19,
+                  ),
+                ),
+                onPressed: () => showAdvisorVoiceSettings(context),
               ),
-            ),
+              const SizedBox(width: 4),
+              GestureDetector(
+                onTap: () => Get.to(() => ProfileView()),
+                child: const CircleAvatar(
+                  radius: 18,
+                  backgroundColor: Color(0xFF0B1C2D),
+                  child: Icon(
+                    Icons.person_outlined,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

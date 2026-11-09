@@ -449,6 +449,13 @@ class VoiceController extends GetxController {
 
       await _audioPlayer.stop();
       currentlyPlayingUrl.value = fullURLString;
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final rate = prefs.getDouble('preferred_speech_rate') ?? 1.0;
+        await _audioPlayer.setPlaybackRate(rate);
+      } catch (_) {}
+
       await _audioPlayer.play(UrlSource(fullURLString));
     } catch (e) {
       Get.snackbar('Playback Error', 'Failed to play audio.');
