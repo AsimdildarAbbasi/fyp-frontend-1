@@ -43,6 +43,8 @@ class AcademicReportsView extends StatelessWidget {
                   children: [
                     if (controller.selectedTab.value == ReportTab.offered)
                       ...controller.offeredCourses.map(_buildOfferedCourseCard),
+                    if (controller.selectedTab.value == ReportTab.mystudents)
+                      ...controller.mystudents.map(_buildmystudentCard),
                     if (controller.selectedTab.value == ReportTab.dropped)
                       ...controller.droppedCourses.map(_buildDroppedCourseCard),
                     if (controller.selectedTab.value == ReportTab.transcript)
@@ -75,6 +77,7 @@ class AcademicReportsView extends StatelessWidget {
                 case ReportTab.offered: title = "Offered Courses"; break;
                 case ReportTab.dropped: title = "Dropped Courses"; break;
                 case ReportTab.transcript: title = "Transcript"; break;
+                case ReportTab.mystudents: title="My Students"; break;
               }
 
               return GestureDetector(
@@ -127,6 +130,42 @@ class AcademicReportsView extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   "${course.courseId} • ${course.teacherName}",
+                  style: const TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+        ],
+      ),
+    );
+  }
+
+Widget _buildmystudentCard(MyStudents student) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppGradients.mainGradient,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  student.sid,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "${student.cgpa} • ${student.sos}",
                   style: const TextStyle(color: Colors.white70, fontSize: 13),
                 ),
               ],

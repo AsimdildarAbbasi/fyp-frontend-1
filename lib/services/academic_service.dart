@@ -18,4 +18,9 @@ class AcademicService {
     final data = await _network.request('/student/$studentId/transcript', 'GET');
     return (data as List).map((e) => TranscriptCourse.fromJson(e)).toList();
   }
+
+  Future<List<MyStudents>> fetchmystudents(double cgpa) async {
+    final data = await _network.request('/student/$cgpa/mystudent', 'GET');
+    return (data as List).map((e) => MyStudents.fromJson(e)).toList();
+  }
 }

@@ -157,7 +157,6 @@ class _AdvisorVoiceSettingsSheetState extends State<AdvisorVoiceSettingsSheet>
           }
         } catch (_) {}
       }
-
       // 2. Fetch available voices dynamically from backend API: GET /api/voices
       final voicesPayload = await _voiceService.fetchAvailableVoices();
       if (voicesPayload != null && mounted) {
@@ -435,43 +434,52 @@ class _AdvisorVoiceSettingsSheetState extends State<AdvisorVoiceSettingsSheet>
               // Title Row
               Row(
                 children: [
-                  const Text(
-                    "Advisor Voice Settings",
-                    style: TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                      letterSpacing: -0.3,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0F2FE),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
+                  Expanded(
+                    child: Row(
                       children: [
-                        Icon(
-                          Icons.auto_awesome,
-                          size: 13,
-                          color: Color(0xFF0284C7),
+                        const Flexible(
+                          child: Text(
+                            "Advisor Voice Settings",
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF0F172A),
+                              letterSpacing: -0.3,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                        SizedBox(width: 4),
-                        Text(
-                          "AI TTS",
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF0284C7),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.auto_awesome,
+                                size: 13,
+                                color: Color(0xFF0284C7),
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                "AI TTS",
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF0284C7),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
+                  const SizedBox(width: 8),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),
                     child: Container(
@@ -494,7 +502,7 @@ class _AdvisorVoiceSettingsSheetState extends State<AdvisorVoiceSettingsSheet>
 
               // Subtitle
               const Text(
-                "Select your preferred AI advisor voice for speech responses",
+                "Select your preferred AI advisor voice accent for speech responses",
                 style: TextStyle(
                   fontSize: 13.5,
                   color: Color(0xFF64748B),
@@ -515,7 +523,7 @@ class _AdvisorVoiceSettingsSheetState extends State<AdvisorVoiceSettingsSheet>
                       ),
                       SizedBox(height: 14),
                       Text(
-                        "Connecting to backend voices...",
+                        "Connecting to advisor voices...",
                         style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
                       ),
                     ],
@@ -549,7 +557,7 @@ class _AdvisorVoiceSettingsSheetState extends State<AdvisorVoiceSettingsSheet>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Text(
-                      "AVAILABLE VOICE PROFILES",
+                      "AVAILABLE ADVISOR ACCENTS",
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
@@ -558,7 +566,7 @@ class _AdvisorVoiceSettingsSheetState extends State<AdvisorVoiceSettingsSheet>
                       ),
                     ),
                     Text(
-                      "${_profiles.length} Available",
+                      "${_profiles.length} Accents",
                       style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -704,29 +712,34 @@ class _AdvisorVoiceSettingsSheetState extends State<AdvisorVoiceSettingsSheet>
                       children: [
                         // Header row: blue indicator + title + tag
                         Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF0284C7),
-                                    shape: BoxShape.circle,
+                            Expanded(
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF0284C7),
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 8),
-                                const Text(
-                                  "Audition Speech Sample",
-                                  style: TextStyle(
-                                    fontSize: 14.5,
-                                    fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0F172A),
+                                  const SizedBox(width: 8),
+                                  const Flexible(
+                                    child: Text(
+                                      "Audition Speech Sample",
+                                      style: TextStyle(
+                                        fontSize: 14.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                               decoration: BoxDecoration(

@@ -31,16 +31,17 @@ class VoiceProfile {
     final name = json['name']?.toString() ?? id;
     final displayName = json['display_name']?.toString() ?? name;
     final category = json['category']?.toString() ?? '';
+    final accentField = json['accent']?.toString();
     final language = json['language']?.toString() ?? '';
     final gender = json['gender']?.toString() ?? 'Natural';
     final sampleUrl = json['sample_url']?.toString();
+    final customSampleText = json['sample_text']?.toString();
     final isRecommended = json['is_recommended'] == true;
 
     // Build friendly accent / category label
-    String accent = category;
-    if (accent.isEmpty || accent == 'General') {
-      accent = language.isNotEmpty ? language : 'General';
-    }
+    String accent = (accentField != null && accentField.isNotEmpty)
+        ? accentField
+        : (category.isNotEmpty ? category : (language.isNotEmpty ? language : 'General'));
 
     return VoiceProfile(
       id: id,
@@ -51,7 +52,8 @@ class VoiceProfile {
           ? 'Clear & Friendly'
           : (gender == 'Male' ? 'Professional & Calm' : 'Natural'),
       pitch: "Natural",
-      sampleText: defaultSampleText ??
+      sampleText: customSampleText ??
+          defaultSampleText ??
           "Assalamu alaikum, main aap ka university advisor hoon. Main aap ki madad kar sakta hoon.",
       sampleUrl: sampleUrl,
       isRecommended: isRecommended,

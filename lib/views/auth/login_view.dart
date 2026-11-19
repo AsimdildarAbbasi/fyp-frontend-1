@@ -4,164 +4,139 @@ import '../../controllers/login_controller.dart';
 import '../../network/network_manager.dart';
 import '../components/constants.dart';
 import '../home/chat_sessions_screen.dart';
+import '../home/teacher_dashboard.dart';
 
-class LoginView extends StatelessWidget {
-  LoginView({super.key});
+class LoginView extends StatefulWidget {
+  const LoginView({super.key});
 
+  @override
+  State<LoginView> createState() => _LoginViewState();
+}
+
+class _LoginViewState extends State<LoginView> {
   final LoginController controller = Get.put(LoginController());
+  bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    controller.resetState();
+  }
 
   @override
   Widget build(BuildContext context) {
-    ever(controller.navigateToHome, (bool navigate) {
-      if (navigate) {
-        Get.offAll(() => ChatSessionsScreen());
-      }
-    });
-
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFF3F7FA),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            _buildTopCard(context),
+            _buildTopSection(context),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: _buildFormCard(context),
             ),
+            const SizedBox(height: 30),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTopCard(BuildContext context) {
+  Widget _buildTopSection(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
+
     return Container(
-      height: 250,
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: Color(0xFFE6ECF2),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(24),
-          bottomRight: Radius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFD3E3F0),
+            Color(0xFFE4EEF6),
+            Color(0xFFF3F7FA),
+          ],
         ),
       ),
       child: Stack(
         children: [
+          // 〰️ Subtle EEG Waveform in background
           Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFE6ECF2),
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
+            child: CustomPaint(
+              painter: EegWavePainter(),
+            ),
+          ),
+
+          // ⚙️ Top-Right Settings Gear Icon
+          Positioned(
+            top: topPadding > 0 ? topPadding + 10 : 20,
+            right: 18,
+            child: GestureDetector(
+              onTap: () => _showServerSettingsDialog(context),
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: const BoxDecoration(
+                  color: Color(0xFF8B9FB3),
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.settings,
+                  color: Colors.white,
+                  size: 22,
                 ),
               ),
             ),
           ),
+
+          // 📖 Center Branding: Open Book Icon in Squircle + Title
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: AppGradients.mainGradient,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 3,
-                        offset: const Offset(2, 5),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.book,
-                    size: 40,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  "University AI Advisor",
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                ValueListenableBuilder<String>(
-                  valueListenable: NetworkManager.baseURLNotifier,
-                  builder: (context, _, __) {
-                    return GestureDetector(
-                      onTap: () => _showServerSettingsDialog(context),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.black.withOpacity(0.06)),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.04),
-                              blurRadius: 4,
-                              offset: const Offset(0, 1),
-                            ),
-                          ],
+            child: Padding(
+              padding: EdgeInsets.only(
+                top: topPadding > 0 ? topPadding + 28 : 42,
+                bottom: 24,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 72,
+                    height: 72,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F3A64),
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF0F3A64).withOpacity(0.3),
+                          blurRadius: 14,
+                          offset: const Offset(0, 6),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.wifi, size: 12, color: Color(0xFF245C94)),
-                            const SizedBox(width: 5),
-                            Text(
-                              NetworkManager.displayHost,
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFF245C94),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).padding.top > 0
-                ? MediaQuery.of(context).padding.top + 6
-                : 14,
-            right: 14,
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                borderRadius: BorderRadius.circular(24),
-                onTap: () => _showServerSettingsDialog(context),
-                child: Container(
-                  padding: const EdgeInsets.all(9),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 6,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.menu_book_rounded,
+                      size: 38,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.settings_outlined,
-                    color: Color(0xFF0B1C2D),
-                    size: 24,
+                  const SizedBox(height: 18),
+                  const Text(
+                    "University AI Advisor",
+                    style: TextStyle(
+                      fontSize: 25,
+                      fontWeight: FontWeight.w800,
+                      color: Color(0xFF0F172A),
+                      letterSpacing: -0.2,
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
           ),
@@ -171,187 +146,258 @@ class LoginView extends StatelessWidget {
   }
 
   Widget _buildFormCard(BuildContext context) {
-    return Transform.translate(
-      offset: const Offset(0, 40),
-      child: Container(
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: Color(0xFFE6ECF2),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 3,
-              offset: const Offset(2, 5),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE9F0F6),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // "Welcome Back"
+          const Text(
+            "Welcome Back",
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: Color(0xFF0F172A),
+              letterSpacing: -0.3,
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Obx(() => Row(
+          ),
+          const SizedBox(height: 4),
+
+          // "Sign in with your BIIT account"
+          const Text(
+            "Sign in with your BIIT account",
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+              color: Color(0xFF94A3B8),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Email Address Label
+          const Text(
+            "Email Address",
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Email Input Box
+          TextField(
+            onChanged: (val) => controller.email.value = val,
+            keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(
+              color: Color(0xFF0F172A),
+              fontSize: 14.5,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              hintText: "email@BIIT.EDU",
+              hintStyle: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w400,
+              ),
+              prefixIcon: const Icon(
+                Icons.mail_rounded,
+                color: Color(0xFF94A3B8),
+                size: 20,
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF0F3A64), width: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Password Label
+          const Text(
+            "Password",
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              color: Color(0xFF1E293B),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          // Password Input Box
+          TextField(
+            onChanged: (val) => controller.password.value = val,
+            obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => controller.performLogin(),
+            style: const TextStyle(
+              color: Color(0xFF0F172A),
+              fontSize: 14.5,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              hintText: "Password",
+              hintStyle: const TextStyle(
+                color: Color(0xFF94A3B8),
+                fontSize: 14.5,
+                fontWeight: FontWeight.w400,
+              ),
+              prefixIcon: const Icon(
+                Icons.lock_rounded,
+                color: Color(0xFF94A3B8),
+                size: 20,
+              ),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined,
+                  color: const Color(0xFF64748B),
+                  size: 20,
+                ),
+                onPressed: () {
+                  setState(() {
+                    _obscurePassword = !_obscurePassword;
+                  });
+                },
+              ),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFFCBD5E1), width: 1.2),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: const BorderSide(color: Color(0xFF0F3A64), width: 1.5),
+              ),
+            ),
+          ),
+
+          // Error Message Display
+          Obx(() {
+            if (controller.errorMessage.value.isNotEmpty) {
+              final err = controller.errorMessage.value;
+              final isConnError = err.contains("SocketException") ||
+                  err.contains("Connection refused") ||
+                  err.contains("Failed host lookup") ||
+                  err.contains("timed out") ||
+                  err.contains("ClientException");
+
+              return Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: _buildRoleButton(
-                        "Student",
-                        controller.selectedRole.value == "Student",
-                        () => controller.selectedRole.value = "Student",
-                      ),
+                    Text(
+                      err,
+                      style: const TextStyle(color: Color(0xFFDC2626), fontSize: 12.5),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildRoleButton(
-                        "Teacher",
-                        controller.selectedRole.value == "Teacher",
-                        () => controller.selectedRole.value = "Teacher",
+                    if (isConnError) ...[
+                      const SizedBox(height: 6),
+                      GestureDetector(
+                        onTap: () => _showServerSettingsDialog(context),
+                        child: const Text(
+                          "Wrong IP? Tap here or settings gear above to configure IP.",
+                          style: TextStyle(
+                            color: Color(0xFF0F3A64),
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
+                    ],
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+
+          const SizedBox(height: 28),
+
+          // 🚀 Sign In Button
+          Obx(() {
+            if (controller.isLoading.value) {
+              return const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 12),
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0F3A64)),
+                  ),
+                ),
+              );
+            }
+
+            return SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [
+                      Color(0xFF0A3A6B),
+                      Color(0xFF052342),
+                    ],
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF052342).withOpacity(0.35),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
                     ),
                   ],
-                )),
-            const SizedBox(height: 30),
-            const Text("Email Address", style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            _buildTextField(
-              hint: "abc@gmail.com",
-              icon: Icons.email,
-              onChanged: (val) => controller.email.value = val,
-              keyboardType: TextInputType.emailAddress,
-            ),
-            const SizedBox(height: 20),
-            const Text("Password", style: TextStyle(fontWeight: FontWeight.w600)),
-            const SizedBox(height: 8),
-            _buildTextField(
-              hint: "Password",
-              icon: Icons.lock,
-              isPassword: true,
-              onChanged: (val) => controller.password.value = val,
-            ),
-            Obx(() {
-              if (controller.errorMessage.value.isNotEmpty) {
-                final err = controller.errorMessage.value;
-                final isConnError = err.contains("SocketException") ||
-                    err.contains("Connection refused") ||
-                    err.contains("Failed host lookup") ||
-                    err.contains("timed out") ||
-                    err.contains("ClientException");
-                return Padding(
-                  padding: const EdgeInsets.only(top: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        err,
-                        style: const TextStyle(color: Colors.red, fontSize: 12),
-                      ),
-                      if (isConnError) ...[
-                        const SizedBox(height: 6),
-                        GestureDetector(
-                          onTap: () => _showServerSettingsDialog(context),
-                          child: const Text(
-                            "Wrong IP? Tap here or settings icon above to change IP.",
-                            style: TextStyle(
-                              color: Color(0xFF245C94),
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                ),
+                child: ElevatedButton(
+                  onPressed: () => controller.performLogin(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.transparent,
+                    shadowColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 0,
                   ),
-                );
-              }
-              return const SizedBox.shrink();
-            }),
-            const SizedBox(height: 40),
-            Obx(() => controller.isLoading.value
-                ? const Center(child: CircularProgressIndicator())
-                : SizedBox(
-                    width: double.infinity,
-                    child:Container(
-                      decoration: BoxDecoration(
-                        gradient: AppGradients.mainGradient,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: ElevatedButton(
-                        onPressed: () => controller.performLogin(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          "Sign In",
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    )
-                  )),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRoleButton(String title, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFF3B82F6).withOpacity(0.1) : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? const Color(0xFF3B82F6) : Colors.transparent,
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          title,
-          style: TextStyle(
-            color: isSelected ? const Color(0xFF3B82F6) : Colors.grey.shade600,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField({
-    required String hint,
-    required IconData icon,
-    required Function(String) onChanged,
-    bool isPassword = false,
-    TextInputType keyboardType = TextInputType.text,
-  }) {
-    return TextField(
-      onChanged: onChanged,
-      obscureText: isPassword,
-      keyboardType: keyboardType,
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(color: Colors.grey.shade400),
-        prefixIcon: Icon(icon, color: Colors.grey.shade400),
-        filled: true,
-        fillColor: Colors.grey.shade50,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade200),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Color(0xFF3B82F6)),
-        ),
-        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                  child: const Text(
+                    "Sign In",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -383,19 +429,16 @@ class LoginView extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      gradient: AppGradients.mainGradient,
-                      borderRadius: BorderRadius.circular(10),
+                      color: const Color(0xFF0F3A64).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(
-                      Icons.settings_ethernet_rounded,
-                      color: Colors.white,
-                      size: 20,
-                    ),
+                    child: const Icon(Icons.dns_rounded,
+                        color: Color(0xFF0F3A64), size: 20),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   const Text(
-                    "Server IP Settings",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    "Backend Server IP",
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
@@ -405,31 +448,20 @@ class LoginView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "Enter your computer's Wi-Fi IP address or host:",
-                      style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
+                      "Enter your PC/server IP and port to connect Flutter to the FastAPI backend:",
+                      style: TextStyle(fontSize: 12.5, color: Colors.black87),
                     ),
-                    const SizedBox(height: 14),
+                    const SizedBox(height: 12),
                     TextField(
                       controller: textController,
-                      keyboardType: TextInputType.url,
                       decoration: InputDecoration(
-                        labelText: "Server IP / Host",
-                        hintText: "e.g. 192.168.1.27 or 192.168.1.27:8000",
-                        prefixIcon:
-                            const Icon(Icons.wifi, color: Color(0xFF245C94)),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.clear, size: 18),
-                          onPressed: () {
-                            textController.clear();
-                            setDialogState(() {
-                              previewUrl = NetworkManager.formatBaseUrl("");
-                              testResult = null;
-                            });
-                          },
-                        ),
+                        labelText: "Host / IP : Port",
+                        hintText: "192.168.1.27:8000",
+                        prefixIcon: const Icon(Icons.lan_rounded, size: 20),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
+                        isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 12, vertical: 12),
                       ),
@@ -440,36 +472,13 @@ class LoginView extends StatelessWidget {
                         });
                       },
                     ),
-                    const SizedBox(height: 12),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFCBD5E1)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Resolved Target Base URL:",
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: Color(0xFF64748B),
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          SelectableText(
-                            previewUrl,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0F172A),
-                            ),
-                          ),
-                        ],
+                    const SizedBox(height: 8),
+                    Text(
+                      "Base URL: $previewUrl",
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey,
+                        fontFamily: 'monospace',
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -483,9 +492,8 @@ class LoginView extends StatelessWidget {
                                     isTesting = true;
                                     testResult = null;
                                   });
-                                  final res =
-                                      await NetworkManager.testConnection(
-                                          textController.text);
+                                  final res = await NetworkManager.testConnection(
+                                      textController.text);
                                   setDialogState(() {
                                     isTesting = false;
                                     testSuccess = res['success'] == true;
@@ -496,13 +504,14 @@ class LoginView extends StatelessWidget {
                               ? const SizedBox(
                                   width: 14,
                                   height: 14,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
                                 )
-                              : const Icon(Icons.network_check_rounded, size: 18),
-                          label: Text(
-                              isTesting ? "Testing..." : "Test Connection"),
+                              : const Icon(Icons.network_check_rounded,
+                                  size: 18),
+                          label: Text(isTesting ? "Testing..." : "Test Connection"),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: const Color(0xFF245C94),
+                            foregroundColor: const Color(0xFF0F3A64),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -588,7 +597,7 @@ class LoginView extends StatelessWidget {
                         "Server IP Updated",
                         "Now pointing to: ${NetworkManager.baseURL}",
                         snackPosition: SnackPosition.BOTTOM,
-                        backgroundColor: const Color(0xFF0B1C2D),
+                        backgroundColor: const Color(0xFF0F3A64),
                         colorText: Colors.white,
                         duration: const Duration(seconds: 3),
                         margin: const EdgeInsets.all(16),
@@ -596,7 +605,7 @@ class LoginView extends StatelessWidget {
                     }
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF245C94),
+                    backgroundColor: const Color(0xFF0F3A64),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -611,4 +620,44 @@ class LoginView extends StatelessWidget {
       },
     );
   }
+}
+
+/// Subtle EEG waveform painter in the top header
+class EegWavePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFFB0CDE5).withOpacity(0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final path = Path();
+    final h = size.height * 0.48;
+
+    // Left waveform
+    path.moveTo(0, h);
+    path.lineTo(size.width * 0.08, h);
+    path.lineTo(size.width * 0.12, h - 8);
+    path.lineTo(size.width * 0.16, h + 12);
+    path.lineTo(size.width * 0.20, h - 35);
+    path.lineTo(size.width * 0.23, h + 22);
+    path.lineTo(size.width * 0.26, h);
+    path.lineTo(size.width * 0.33, h);
+
+    // Right waveform
+    path.moveTo(size.width * 0.67, h);
+    path.lineTo(size.width * 0.73, h);
+    path.lineTo(size.width * 0.77, h - 10);
+    path.lineTo(size.width * 0.80, h + 20);
+    path.lineTo(size.width * 0.83, h - 38);
+    path.lineTo(size.width * 0.86, h + 18);
+    path.lineTo(size.width * 0.90, h - 5);
+    path.lineTo(size.width * 0.93, h);
+    path.lineTo(size.width, h);
+
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

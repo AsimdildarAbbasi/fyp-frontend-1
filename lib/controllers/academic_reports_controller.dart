@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/academic_reports.dart';
 import '../services/academic_service.dart';
 
-enum ReportTab { offered, dropped, transcript }
+enum ReportTab { offered, dropped, transcript , mystudents}
 
 class AcademicReportsController extends GetxController {
   final AcademicService _academicService = AcademicService();
@@ -12,6 +12,8 @@ class AcademicReportsController extends GetxController {
   var offeredCourses = <OfferedCourse>[].obs;
   var droppedCourses = <DroppedCourse>[].obs;
   var transcriptData = <String, List<TranscriptCourse>>{}.obs;
+  var mystudents = <MyStudents>[].obs;
+
 
   var isLoading = false.obs;
   var errorMessage = ''.obs;
@@ -59,6 +61,13 @@ class AcademicReportsController extends GetxController {
             transcriptData.value = grouped;
           }
           break;
+        case ReportTab.mystudents:
+          if (mystudents.isEmpty) {
+            final data = await _academicService.fetchmystudents(3.99);
+            mystudents.value = data;
+          }
+          break;
+        
       }
     } catch (e) {
       errorMessage.value = e.toString();

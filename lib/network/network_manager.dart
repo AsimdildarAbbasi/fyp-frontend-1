@@ -6,7 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class NetworkManager {
   //static const String baseURL = "http://10.166.36.83:8000/api";
   //static const String baseURL = "http://192.168.100.181:8000/api";//home
-  static const String defaultBaseURL = "http://192.168.100.181:8000/api";//hotspot
+  static const String defaultBaseURL = "http://192.168.1.27:8000/api";//hotspot
   static String _currentBaseURL = defaultBaseURL;
 
   static final ValueNotifier<String> baseURLNotifier = ValueNotifier<String>(_currentBaseURL);

@@ -14,6 +14,7 @@ import '../models/voice_response.dart';
 import '../services/chat_service.dart';
 import '../services/voice_service.dart';
 import '../network/network_manager.dart';
+import 'eeg_controller.dart';
 
 enum VoiceChatState {
   idle,
@@ -195,7 +196,14 @@ class VoiceController extends GetxController {
           audioBytes = await file.readAsBytes();
         }
 
-        const capturedEmotion = "Neutral";
+        String capturedEmotion = "Neutral";
+        if (Get.isRegistered<EegController>()) {
+          final eegCtrl = Get.find<EegController>();
+          if (eegCtrl.isConnectedOrStreaming && eegCtrl.currentEmotion.value.isNotEmpty) {
+            capturedEmotion = eegCtrl.currentEmotion.value;
+          }
+        }
+
         await _streamVoiceMessage(
           audioBytes: audioBytes,
           fileName: fileName,
@@ -278,20 +286,20 @@ class VoiceController extends GetxController {
             // Render transcribed text above floating box
             userTranscript.value = (event['text'] ?? '').toString();
             voiceState.value = VoiceChatState.generatingText;
-            statusMessage.value = "Advisor is replying...";
+            statusMessage.value = "Advisor is thinking...";
             break;
 
           case 'reply_start':
             // Stage: GENERATING_TEXT
             voiceState.value = VoiceChatState.generatingText;
-            statusMessage.value = "Advisor is replying...";
+            statusMessage.value = "Advisor is thinking...";
             streamingReplyText.value = '';
             break;
 
           case 'token':
             // Stream token by token
             voiceState.value = VoiceChatState.generatingText;
-            statusMessage.value = "Advisor is replying...";
+            statusMessage.value = "Advisor is thinking...";
             final token = (event['text'] ?? '').toString();
             streamingReplyText.value += token;
             break;
@@ -405,7 +413,7 @@ class VoiceController extends GetxController {
       userTranscript.value = trimmed;
       streamingReplyText.value = '';
       voiceState.value = VoiceChatState.generatingText;
-      statusMessage.value = "Advisor is replying...";
+      statusMessage.value = "Advisor is thinking...";
 
       final response = await _chatService.sendTextMessage(
         activeId,

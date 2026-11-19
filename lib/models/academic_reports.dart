@@ -24,6 +24,55 @@ class OfferedCourse {
   }
 }
 
+// class MyStudents {
+//   final String sid;
+//   final double cgpa;
+//   final String sos;
+
+//   MyStudents({
+//     required this.sid,
+//     required this.cgpa,
+//     required this.sos,
+//   });
+
+//   factory MyStudents.fromJson(Map<String, dynamic> json) {
+//     return MyStudents(
+//       sid: json['sid'] ?? '',
+//       //cgpa: json['cgpa'] ?? 0.0,
+//       cgpa: (json['cgpa'] as num?)?.toDouble() ?? 0.0,
+//       sos: json['sos'] ?? '',
+//     );
+//   }
+// }
+
+
+
+
+class MyStudents {
+  final String sid;
+  final double cgpa;
+  final String sos;
+
+  MyStudents({
+    required this.sid,
+    required this.cgpa,
+    required this.sos,
+  });
+
+  factory MyStudents.fromJson(Map<String, dynamic> json) {
+    return MyStudents(
+      sid: json['sid']?.toString() ?? '',
+      cgpa: (json['cgpa'] as num?)?.toDouble() ?? 0.0,
+      sos: json['sos']?.toString() ?? '',
+    );
+  }
+}
+
+
+
+
+
+
 class DroppedCourse {
   final String courseId;
   final String title;

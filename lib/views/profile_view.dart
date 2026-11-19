@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:fyp_flutter/views/components/constants.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../controllers/profile_controller.dart';
 import 'academic_reports/academic_reports_view.dart';
+import 'auth/login_view.dart';
 import 'components/advisor_voice_settings_sheet.dart';
 
 class ProfileView extends StatelessWidget {
   ProfileView({super.key});
 
   final ProfileController controller = Get.put(ProfileController());
+
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('student_id');
+    Get.deleteAll(force: true);
+    Get.offAll(() => LoginView());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +28,13 @@ class ProfileView extends StatelessWidget {
         backgroundColor: AppGradients.primaryLight,
         foregroundColor: Colors.black,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Logout',
+            icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444)),
+            onPressed: _logout,
+          ),
+        ],
       ),
       body: Obx(() {
         if (controller.isLoading.value) {
@@ -233,6 +249,34 @@ class ProfileView extends StatelessWidget {
                   ),
                 ),
               ),
+
+              const SizedBox(height: 32),
+
+              // 🚪 Simple Logout Button
+              SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: _logout,
+                  icon: const Icon(Icons.logout_rounded, color: Colors.white, size: 20),
+                  label: const Text(
+                    "Logout",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFEF4444),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 1,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
             ],
           ),
         );
